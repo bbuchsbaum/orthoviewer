@@ -1,0 +1,137 @@
+---
+title: "Browsing NIfTI files with the discovery UI"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Browsing NIfTI files with the discovery UI}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+> **Note:** The discovery UI is an interactive Shiny application that requires
+> a browser. Code examples here are not evaluated during the build. Run them
+> in an interactive R session to see the UI.
+
+## The problem
+
+You have a folder of NIfTI files — maybe dozens — and you want to quickly
+figure out which ones are 3D volumes you can view, which are 4D time-series
+you can't, and what their dimensions and voxel sizes look like. Opening each
+file in a separate tool is tedious.
+
+`orthoviewer()` solves this with a scan-and-browse interface: point it at a
+folder, inspect a metadata table, pick a file, and view it — all without
+leaving R.
+
+## Launching
+
+```{r launch}
+library(orthoviewer)
+
+# Point at a folder of NIfTI files
+orthoviewer("~/data/subjects/sub-01/anat")
+```
+
+This opens a Shiny app with two panels: a sidebar for browsing files and a
+main viewer for displaying volumes.
+
+You can also scan subfolders:
+
+```{r launch-recursive}
+orthoviewer("~/data/subjects", recursive = TRUE)
+```
+
+## The scan-and-load workflow
+
+When the app launches, it immediately scans the target folder for `.nii` and
+`.nii.gz` files. The sidebar shows:
+
+1. **Summary pills** — total files found, how many are loadable, how many
+   are skipped.
+2. **A metadata table** — each file with its type (3D / 4D), dimensions,
+   voxel spacing, coordinate space, and load status.
+3. **A file picker and Load button** — select a loadable file, optionally
+   pick a volume index for 4D files, and load it into the viewer.
+
+### What's loadable?
+
+orthoviewer applies simple eligibility rules:
+
+- **3D volumes** — always loadable.
+- **4D files with 1--2 volumes** — loadable (you pick which volume).
+- **4D files with 3+ volumes** — skipped. These are typically time-series
+  or multi-echo data that don't make sense as a single background volume.
+
+Skipped files appear in the table with an orange border and a reason
+explaining why they were excluded.
+
+### Filtering the table
+
+The **Show** dropdown above the table lets you filter:
+
+- *Loadable only* — just the files you can open (default).
+- *All discovered* — every NIfTI file found in the scan.
+- *Skipped only* — just the files that were excluded.
+
+This is useful for understanding why certain files aren't available.
+
+### Clicking table rows
+
+Loadable rows in the table are clickable. Click a row to select that file in
+the picker below — no need to scroll through the dropdown.
+
+### Loading a volume
+
+Once a file is selected:
+
+1. The metadata panel shows its dimensions, voxel size, and coordinate space.
+2. For 4D files, a slider appears to choose a volume index.
+3. Click **Load in viewer** to display it.
+
+The viewer banner at the top of the main panel shows the loaded file path.
+Click the **copy** button next to it to copy the path to your clipboard.
+
+## Rescanning
+
+If you navigate to a different folder or toggle "Include subfolders," click
+**Rescan folder** to re-scan. The summary and table update in place.
+
+## Programmatic use
+
+`orthoviewer()` returns a Shiny app object. You can capture it without
+launching:
+
+```{r no-launch}
+app <- orthoviewer("~/data/nifti", run = FALSE)
+
+# Launch later
+shiny::runApp(app)
+```
+
+This is useful for embedding the discovery UI in a larger workflow or
+wrapping it in a custom port/host configuration.
+
+## Tips
+
+- **Start narrow.** Point at a specific subject's anatomy folder rather than
+  a whole study directory. Scanning thousands of files takes time.
+- **Use recursive sparingly.** Deep directory trees with many NIfTI files
+  can slow the initial scan. Start with `recursive = FALSE` (the default)
+  and enable it only when you need to search subdirectories.
+- **Monospace path input.** The folder path field uses a monospace font so
+  you can read long paths without squinting. Edit it directly and hit
+  Rescan to change directories.
+
+## Next steps
+
+Once you've found the volume you want, you'll likely want to add overlays
+and interact with the viewer programmatically. See
+`vignette("orthoviewer-intro")` for the full API — layers, colormaps,
+thresholds, event handling, and the proxy interface.
