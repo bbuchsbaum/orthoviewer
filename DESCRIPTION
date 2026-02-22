@@ -1,0 +1,35 @@
+Package: orthoviewer
+Type: Package
+Title: Interactive Orthogonal Brain Viewer for NeuroImaging Data
+Version: 0.1.0
+Authors@R: person("Bradley", "Buchsbaum", email = "brad.buchsbaum@gmail.com", role = c("aut", "cre"))
+Description: An interactive Shiny application for viewing neuroimaging data in orthogonal slices.
+    Provides spatial compatibility checking, overlay support with automatic resampling,
+    and modern UI with GoldenLayout panels. Built on top of neuroim2 for robust
+    neuroimaging data handling.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+Imports:
+    shiny,
+    neuroim2,
+    stats,
+    methods,
+    R6,
+    htmlwidgets
+Suggests:
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown,
+    bslib,
+    shinyWidgets,
+    viridisLite,
+    ggplot2,
+    crayon,
+    purrr,
+    shinyjs,
+    htmltools
+VignetteBuilder: knitr
+Config/testthat/edition: 3 
+Config/Needs/website: albersdown

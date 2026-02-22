@@ -1,0 +1,10 @@
+dependencies:
+  - name: neuroimjs
+    version: 0.0.1
+    src: htmlwidgets/lib/neuroimjs
+    script: neuroimjs.umd.js
+    stylesheet: style.css
+  - name: ortho-viewer-css
+    version: 0.0.1
+    src: htmlwidgets
+    stylesheet: ortho_viewer.css

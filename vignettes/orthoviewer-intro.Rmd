@@ -1,0 +1,355 @@
+---
+title: "Introduction to orthoviewer"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to orthoviewer}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+## Overview
+
+> **Note:** Code examples in this vignette are not evaluated during the build
+> process because orthoviewer creates interactive Shiny applications that
+> require a browser. To see working examples, run `orthoviewer_example_app()`
+> or `orthoviewer_click_example()` in an interactive R session.
+
+orthoviewer provides an interactive 3D brain volume viewer for R. It displays
+neuroimaging data in the standard orthogonal views (axial, coronal, sagittal)
+with support for multiple overlay layers and interactive navigation.
+
+## Quick Start
+
+The simplest way to view a brain volume:
+
+```{r quickstart}
+library(orthoviewer)
+
+# View a volume - launches immediately in interactive sessions
+view_ortho(brain_volume)
+```
+
+That's it! A browser window opens with the interactive viewer and a status bar
+showing the current crosshair position and intensity.
+
+## The Fluent API
+
+orthoviewer uses a pipe-friendly builder pattern for composing viewers:
+```{r fluent-api}
+view_ortho(brain) |>
+  layer(stat_map, colormap = "hot", thresh = c(-2, 2)) |>
+  layer(roi_mask, colormap = "cool", opacity = 0.5) |>
+  controls() |>
+  launch()
+```
+
+Each function returns the builder object, so you can chain them together.
+In interactive sessions, the viewer launches automatically when printed,
+so you can often omit `launch()`.
+
+## Loading Data
+
+### From NIfTI files (recommended)
+
+Use neuroim2 to load NIfTI files with proper spatial metadata:
+
+```{r load-nifti}
+library(neuroim2)
+
+# Load brain and statistical map
+brain <- read_vol("mni152_t1.nii.gz")
+stat <- read_vol("zstat1.nii.gz")
+
+# View with overlay
+view_ortho(brain) |>
+  layer(stat, thresh = c(-3, 3))
+```
+
+### From arrays
+
+You can also use plain R arrays (though without spatial metadata):
+
+```{r load-array}
+# Create a simple test volume
+brain <- array(rnorm(64^3), dim = c(64, 64, 64))
+view_ortho(brain)
+```
+
+## Adding Overlays
+
+Use `layer()` to add statistical maps, ROIs, or other overlays:
+
+```{r overlays}
+view_ortho(brain) |>
+  layer(stat_map,
+        colormap = "hot",
+        thresh = c(-3, 3),
+        opacity = 0.8)
+```
+
+### Multiple overlays
+
+```{r multiple-overlays}
+view_ortho(brain) |>
+  layer(activation, colormap = "hot", thresh = c(-2, 2), id = "activation") |>
+  layer(roi_mask, colormap = "cool", opacity = 0.5, id = "roi") |>
+  controls()
+```
+
+### Layer options
+
+- `colormap`: "viridis", "plasma", "hot", "cool", "RdBu", "Greys", etc.
+- `thresh`: Values between low and high are transparent (e.g., `c(-2, 2)`)
+- `range`: Display window range (defaults to data range)
+- `opacity`: 0 (transparent) to 1 (opaque)
+- `id`: Unique identifier for later reference
+
+## UI Options
+
+### Status bar
+
+The status bar (enabled by default) shows position and intensity:
+
+```{r status-bar}
+# Disable status bar
+view_ortho(brain) |>
+  status_bar(FALSE)
+```
+
+### Control panel
+
+Add a sidebar with interactive controls:
+
+```{r controls}
+view_ortho(brain) |>
+  layer(stat_map) |>
+  controls()
+```
+
+The control panel lets you:
+
+- Navigate to specific coordinates
+- Toggle overlay visibility
+- Adjust opacity with sliders
+- Change thresholds in real-time
+- Switch colormaps
+
+### Other options
+
+```{r other-options}
+view_ortho(brain) |>
+  layer(stat_map) |>
+  set_title("My Analysis") |>
+  debug_mode()  # Enable console logging
+```
+
+## Launching
+
+```{r launch}
+# Auto-launch in interactive sessions (just evaluate the expression)
+view_ortho(brain)
+
+# Explicit launch
+view_ortho(brain) |> launch()
+
+# Get Shiny app object without launching
+app <- view_ortho(brain) |> launch(run = FALSE)
+```
+
+## Advanced: Custom Shiny Apps
+
+For full control, you can build custom Shiny apps using the widget directly.
+
+### Basic Shiny app
+
+```{r shiny-basic}
+library(shiny)
+library(orthoviewer)
+
+ui <- fluidPage(
+  ortho_viewerOutput("viewer", height = "600px")
+)
+
+server <- function(input, output, session) {
+  output$viewer <- renderOrtho_viewer({
+    ortho_viewer(brain, bg_colormap = "Greys")
+  })
+
+  # Add overlay via proxy
+  observe({
+    p <- ortho_proxy("viewer", session)
+    p$add_layer(stat_map, id = "stats", thresh = c(-2, 2), colormap = "hot")
+  })
+}
+
+shinyApp(ui, server)
+```
+
+### Controlling the viewer programmatically
+
+The `ortho_proxy()` object lets you control the viewer from R:
+
+```{r proxy-control}
+p <- ortho_proxy("viewer", session)
+
+# Navigate to coordinates (with smooth animation)
+p$set_crosshair(c(32, -20, 45), animate = TRUE)
+
+# Adjust overlay appearance
+p$set_threshold(c(-3, 3), layer_id = "stats")
+p$set_colormap("viridis", layer_id = "stats")
+p$set_opacity(0.5, layer_id = "stats")
+
+# Toggle visibility
+p$hide_layer("stats")
+p$show_layer("stats")
+
+# Reorder layers (first = bottom, last = top)
+p$set_layer_order(c("background", "mask", "stats"))
+
+# Remove a layer
+p$remove_layer("stats")
+```
+
+## Handling Events
+
+orthoviewer provides a clean API for responding to user interactions that hides
+the underlying Shiny plumbing.
+
+### Simple: Builder API callbacks
+
+For standalone viewers, register handlers directly in the builder chain:
+
+```{r builder-events}
+view_ortho(brain) |>
+  layer(stat_map, thresh = c(-3, 3)) |>
+  on_click(function(click) {
+    world <- ortho_world(click)
+    message("Clicked at: ", paste(round(world, 1), collapse = ", "))
+  }) |>
+  launch()
+```
+
+Available builder handlers:
+
+- `on_click(handler)` - single click
+- `on_dblclick(handler)` - double click
+- `on_hover(handler)` - mouse movement (throttled)
+- `on_crosshair(handler)` - crosshair position changes
+
+### Intermediate: Reactive streams
+
+For custom Shiny apps, use reactive event streams for composable event handling:
+
+```{r reactive-streams}
+server <- function(input, output, session) {
+  output$viewer <- renderOrtho_viewer({
+    ortho_viewer(brain, bg_colormap = "Greys")
+  })
+
+  # Create reactive click stream
+  clicks <- ortho_clicks("viewer", session)
+
+  # React to clicks
+  observeEvent(clicks(), {
+    click <- clicks()
+    world <- ortho_world(click)
+    voxel <- ortho_voxel(click)
+    intensity <- ortho_intensity(click)
+
+    message(sprintf("Clicked at [%.1f, %.1f, %.1f] mm",
+                    world[1], world[2], world[3]))
+  })
+}
+```
+
+Available reactive streams:
+
+- `ortho_clicks(viewer_id, session)` - click events
+- `ortho_dblclicks(viewer_id, session)` - double-click events
+- `ortho_hovers(viewer_id, session)` - hover events
+- `ortho_crosshairs(viewer_id, session)` - crosshair changes
+
+### Simple callback wrappers
+
+For quick event handling without managing reactives:
+
+```{r callback-wrappers}
+server <- function(input, output, session) {
+  output$viewer <- renderOrtho_viewer({
+    ortho_viewer(brain)
+  })
+
+  # Simple callback - no need to manage reactives
+  ortho_on_click("viewer", function(click) {
+    world <- ortho_world(click)
+    showNotification(paste("Clicked:", round(world[1], 1)))
+  }, session)
+}
+```
+
+### Event data accessors
+
+All event handlers receive an `ortho_event` object with normalized data:
+
+```{r event-accessors}
+# Inside any event handler:
+world <- ortho_world(click)        # numeric[3]: coordinates in mm
+voxel <- ortho_voxel(click)        # integer[3]: voxel indices
+intensity <- ortho_intensity(click) # named numeric: values at location
+view <- click$view                  # "axial", "coronal", or "sagittal"
+
+# Check modifier keys
+if (ortho_modifier(click, "shift")) {
+  message("Shift-click!")
+}
+if (ortho_modifier(click, "ctrl")) {
+  message("Ctrl-click!")
+}
+
+# Access raw event for power users
+raw <- click$raw
+```
+
+## Example Apps
+
+orthoviewer includes built-in examples:
+
+```{r examples}
+# Basic viewer demo
+orthoviewer_example_app()
+
+# Click event handling demo
+orthoviewer_click_example()
+
+# Navigation and layer controls demo
+orthoviewer_navigation_example()
+```
+
+## Tips
+
+1. **Use layer IDs**: Always name your layers when adding them so you can
+   reference them later.
+
+2. **Threshold appropriately**: For statistical maps, hide non-significant
+   voxels with thresholds (e.g., `c(-2, 2)` for z-scores).
+
+3. **Reduce opacity**: When overlaying multiple maps, lower opacity helps
+   see through layers.
+
+4. **Use animation sparingly**: Smooth transitions are nice for user-initiated
+   navigation but can be distracting if triggered frequently.
+
+## Session Info
+
+```{r sessioninfo, eval=TRUE}
+sessionInfo()
+```

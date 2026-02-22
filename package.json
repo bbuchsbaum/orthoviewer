@@ -1,0 +1,17 @@
+{
+  "name": "orthoviewer-ui-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "ui:snapshots": "PLAYWRIGHT_BROWSERS_PATH=.playwright-browsers node tests/ui/snapshot-test.mjs",
+    "ui:snapshots:update": "PLAYWRIGHT_BROWSERS_PATH=.playwright-browsers node tests/ui/snapshot-test.mjs --update",
+    "ui:a11y": "PLAYWRIGHT_BROWSERS_PATH=.playwright-browsers node tests/ui/a11y-test.mjs",
+    "ui:check": "npm run ui:snapshots && npm run ui:a11y"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
+    "pixelmatch": "^6.0.0",
+    "playwright": "^1.52.0",
+    "pngjs": "^7.0.0"
+  }
+}

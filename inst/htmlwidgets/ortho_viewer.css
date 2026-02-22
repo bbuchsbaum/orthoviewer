@@ -1,0 +1,241 @@
+.ortho-widget-root {
+  --ortho-bg-canvas: #eef2f8;
+  --ortho-bg-panel: #f8f9fc;
+  --ortho-bg-panel-edge: #edf1f8;
+  --ortho-viewer-bg: #090c12;
+  --ortho-viewer-shell: #111722;
+  --ortho-border-soft: rgba(14, 21, 36, 0.1);
+  --ortho-border-strong: rgba(14, 21, 36, 0.18);
+  --ortho-accent: #15b8d3;
+  --ortho-accent-warm: #f5a524;
+  --ortho-text-main: #1b2436;
+  --ortho-text-muted: #5f6a81;
+  --ortho-text-soft: #8f98ab;
+  --ortho-radius-shell: 14px;
+  --ortho-radius-md: 10px;
+  --ortho-status-bg: rgba(6, 10, 18, 0.86);
+
+  font-family: "Avenir Next", "Segoe UI Variable Text", "SF Pro Text", "Helvetica Neue", sans-serif;
+  background:
+    radial-gradient(120% 140% at 0% 0%, #f9fbff 0%, #f4f6fb 44%, var(--ortho-bg-canvas) 100%);
+  color: var(--ortho-text-main);
+  width: 100%;
+  height: 100%;
+}
+
+.ortho-shell {
+  display: grid;
+  grid-template-columns: clamp(252px, 24vw, 336px) minmax(0, 1fr);
+  width: 100%;
+  height: 100%;
+  border-radius: var(--ortho-radius-shell);
+  overflow: hidden;
+  border: 1px solid var(--ortho-border-soft);
+  background: linear-gradient(135deg, #f5f7fc 0%, #edf1f8 100%);
+  box-shadow:
+    0 24px 50px -30px rgba(9, 17, 32, 0.42),
+    0 2px 6px rgba(15, 23, 41, 0.06);
+}
+
+.ortho-sidebar {
+  padding: 0;
+  box-sizing: border-box;
+  border-right: 1px solid var(--ortho-border-soft);
+  background:
+    linear-gradient(180deg, var(--ortho-bg-panel) 0%, var(--ortho-bg-panel-edge) 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: stretch;
+  min-width: 0;
+}
+
+.ortho-sidebar layer-control-panel {
+  flex: 1 1 auto;
+}
+
+.ortho-shell.ortho-no-sidebar {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.ortho-viewer-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(100% 120% at 50% 10%, rgba(21, 184, 211, 0.08) 0%, transparent 36%),
+    linear-gradient(160deg, var(--ortho-viewer-shell) 0%, var(--ortho-viewer-bg) 68%);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.ortho-viewer-inner {
+  flex: 1 1 auto;
+  position: relative;
+  margin: 14px 16px 6px 16px;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: var(--ortho-radius-md);
+}
+
+.ortho-viewer-inner:focus-visible {
+  outline: 2px solid var(--ortho-accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px rgba(21, 184, 211, 0.22);
+}
+
+.ortho-status-bar {
+  flex: 0 0 auto;
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  row-gap: 6px;
+  column-gap: 16px;
+  padding: 8px 14px 10px;
+  background: linear-gradient(180deg, rgba(9, 13, 22, 0.62) 0%, var(--ortho-status-bg) 72%);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 11px;
+  font-family: "IBM Plex Mono", "JetBrains Mono", "SF Mono", "Consolas", monospace;
+  letter-spacing: 0.02em;
+  z-index: 10;
+}
+
+.ortho-status-bar .status-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  min-width: fit-content;
+}
+
+.ortho-status-bar .status-label {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.ortho-status-bar .status-value {
+  color: rgba(255, 255, 255, 0.94);
+  font-variant-numeric: tabular-nums;
+}
+
+.ortho-status-bar .status-coord {
+  font-variant-numeric: tabular-nums;
+  min-width: 150px;
+  display: inline-block;
+}
+
+.ortho-status-bar [data-status="voxel"] {
+  min-width: 92px;
+}
+
+.ortho-status-bar [data-status="slice"] {
+  min-width: 132px;
+}
+
+.ortho-status-bar .status-separator {
+  width: 1px;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.16);
+  flex-shrink: 0;
+}
+
+.ortho-status-bar .status-intensity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ortho-status-bar .intensity-item {
+  display: inline-flex;
+  align-items: center;
+}
+
+.ortho-status-bar .intensity-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.ortho-viewer-container .ortho-pane {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.ortho-viewer-container .pane-label {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.76);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.ortho-viewer-container .crosshair-line {
+  stroke: rgba(245, 165, 36, 0.94);
+}
+
+@media (max-width: 1200px) {
+  .ortho-shell {
+    grid-template-columns: clamp(236px, 28vw, 300px) minmax(0, 1fr);
+  }
+
+  .ortho-viewer-inner {
+    margin: 10px 12px 6px 12px;
+  }
+
+  .ortho-status-bar {
+    column-gap: 12px;
+    padding-inline: 12px;
+  }
+}
+
+@media (max-width: 980px) {
+  .ortho-shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(252px, 38vh) minmax(0, 1fr);
+  }
+
+  .ortho-sidebar {
+    border-right: 0;
+    border-bottom: 1px solid var(--ortho-border-soft);
+    overflow-y: auto;
+  }
+
+  .ortho-viewer-container {
+    min-height: 430px;
+  }
+}
+
+@media (max-width: 700px) {
+  .ortho-viewer-inner {
+    margin: 8px 8px 4px 8px;
+  }
+
+  .ortho-status-bar {
+    font-size: 10px;
+    column-gap: 10px;
+    row-gap: 4px;
+  }
+
+  .ortho-status-bar .status-group {
+    min-width: calc(50% - 6px);
+  }
+
+  .ortho-status-bar .status-separator {
+    display: none;
+  }
+
+  .ortho-status-bar .status-coord {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 520px) {
+  .ortho-status-bar .status-group {
+    min-width: 100%;
+  }
+}

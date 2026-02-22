@@ -1,0 +1,14 @@
+/doc/
+/Meta/
+/node_modules/
+/tests/ui/.tmp/
+/tests/ui/actual/
+/tests/ui/diff/
+.DS_Store
+*.Rcheck/
+*.tar.gz
+.rcmdcheck_result.rds
+.npm-cache/
+.playwright-browsers/
+.omc/
+.albersdown.bak/
