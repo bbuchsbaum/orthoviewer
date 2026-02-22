@@ -317,6 +317,20 @@ orthoviewer <- function(path = ".",
           --input-focus: #2c6fdf;
         }
 
+        .ov-dir-header td {
+          background: #edf2fb;
+          font-weight: 700;
+          font-size: 11px;
+          color: #32425f;
+          padding: 5px 8px;
+          border-bottom: 1px solid rgba(18, 34, 62, 0.09);
+          letter-spacing: 0.01em;
+        }
+        .ov-dir-header td .ov-dir-icon {
+          margin-right: 4px;
+          opacity: 0.5;
+        }
+
         @media (max-width: 900px) {
           .ov-shell {
             grid-template-columns: 1fr;
@@ -649,9 +663,33 @@ orthoviewer <- function(path = ".",
               shiny::tags$th("Status", scope = "col")
             )
           ),
-          shiny::tags$tbody(
-            lapply(seq_len(nrow(df)), function(i) {
+          shiny::tags$tbody({
+            dirs <- dirname(df$rel_path)
+            has_subdirs <- any(dirs != ".")
+            last_dir <- ""
+            rows <- list()
+            for (i in seq_len(nrow(df))) {
               row <- df[i, , drop = FALSE]
+              cur_dir <- dirs[[i]]
+
+              if (has_subdirs && cur_dir != "." && cur_dir != last_dir) {
+                rows <- c(rows, list(
+                  shiny::tags$tr(class = "ov-dir-header",
+                    shiny::tags$td(colspan = "6",
+                      shiny::tags$span(class = "ov-dir-icon", "\U0001F4C1"),
+                      paste0(cur_dir, "/")
+                    )
+                  )
+                ))
+                last_dir <- cur_dir
+              }
+
+              display_name <- if (has_subdirs && cur_dir != ".") {
+                basename(row$rel_path[[1]])
+              } else {
+                row$rel_path[[1]]
+              }
+
               is_ok <- isTRUE(row$eligible[[1]])
               status_class <- if (is_ok) {
                 "ov-status ov-status-ok"
@@ -663,26 +701,29 @@ orthoviewer <- function(path = ".",
                 if (is_ok) "ov-row-clickable" else ""
               )
 
-              shiny::tags$tr(
-                role = "row",
-                class = row_class,
-                `data-file-id` = as.character(row$file_id[[1]]),
-                shiny::tags$td(role = "cell",
-                  shiny::div(class = "ov-file", row$rel_path[[1]]),
-                  if (!is_ok && nzchar(row$reason[[1]])) {
-                    shiny::div(class = "ov-reason", row$reason[[1]])
-                  }
-                ),
-                shiny::tags$td(role = "cell", row$type_label[[1]]),
-                shiny::tags$td(role = "cell", row$dims_label[[1]]),
-                shiny::tags$td(role = "cell", row$space_label[[1]]),
-                shiny::tags$td(role = "cell", row$spacing_label[[1]]),
-                shiny::tags$td(role = "cell",
-                  shiny::span(class = status_class, row$status_label[[1]])
+              rows <- c(rows, list(
+                shiny::tags$tr(
+                  role = "row",
+                  class = row_class,
+                  `data-file-id` = as.character(row$file_id[[1]]),
+                  shiny::tags$td(role = "cell",
+                    shiny::div(class = "ov-file", display_name),
+                    if (!is_ok && nzchar(row$reason[[1]])) {
+                      shiny::div(class = "ov-reason", row$reason[[1]])
+                    }
+                  ),
+                  shiny::tags$td(role = "cell", row$type_label[[1]]),
+                  shiny::tags$td(role = "cell", row$dims_label[[1]]),
+                  shiny::tags$td(role = "cell", row$space_label[[1]]),
+                  shiny::tags$td(role = "cell", row$spacing_label[[1]]),
+                  shiny::tags$td(role = "cell",
+                    shiny::span(class = status_class, row$status_label[[1]])
+                  )
                 )
-              )
-            })
-          )
+              ))
+            }
+            rows
+          })
         )
       )
     })
