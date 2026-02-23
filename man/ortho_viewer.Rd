@@ -8,6 +8,11 @@ ortho_viewer(
   bg_volume,
   bg_colormap = "Greys",
   bg_range = NULL,
+  surface = NULL,
+  surface_colormap = "viridis",
+  surface_range = NULL,
+  surface_threshold = c(0, 0),
+  initial_mode = c("slices", "surface"),
   width = "100\%",
   height = 600,
   elementId = NULL,
@@ -26,6 +31,25 @@ volume (e.g., \code{"Greys"}).}
 \item{bg_range}{Optional numeric vector of length 2 specifying the
 intensity range for display windowing. If NULL (default), the
 volume's data range is used.}
+
+\item{surface}{Optional surface object for surface visualization mode.
+Can be a \code{neurosurf} \code{SurfaceGeometry},
+\code{NeuroSurface}, or \code{ColorMappedNeuroSurface}. When
+provided, a \code{[Slices] [Surface]} toggle appears in the viewer.
+Requires the \pkg{neurosurf} package.}
+
+\item{surface_colormap}{Name of the colormap to use for the surface
+overlay (e.g., \code{"viridis"}). Default \code{"viridis"}.}
+
+\item{surface_range}{Optional numeric vector of length 2 for surface
+colormap scaling. If NULL, derived from the data range.}
+
+\item{surface_threshold}{Numeric vector of length 2: threshold range
+for the surface. Values between \code{threshold[1]} and
+\code{threshold[2]} are made transparent. Default \code{c(0, 0)}.}
+
+\item{initial_mode}{Which mode to show on load: \code{"slices"}
+(default) or \code{"surface"}.}
 
 \item{width, height}{Widget dimensions passed to \code{htmlwidgets}.}
 

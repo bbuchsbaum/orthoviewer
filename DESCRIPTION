@@ -17,6 +17,7 @@ Imports:
     stats,
     methods,
     R6,
+    htmltools,
     htmlwidgets
 Suggests:
     testthat (>= 3.0.0),
@@ -29,7 +30,7 @@ Suggests:
     crayon,
     purrr,
     shinyjs,
-    htmltools
+    neurosurf
 VignetteBuilder: knitr
 Config/testthat/edition: 3 
 Config/Needs/website: albersdown

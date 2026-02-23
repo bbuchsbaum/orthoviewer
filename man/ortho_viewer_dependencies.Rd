@@ -4,10 +4,21 @@
 \alias{ortho_viewer_dependencies}
 \title{htmlwidgets dependencies for the ortho_viewer widget}
 \usage{
-ortho_viewer_dependencies()
+ortho_viewer_dependencies(include_surface = FALSE)
+}
+\arguments{
+\item{include_surface}{Logical: include Three.js and surfviewjs?
+Defaults to FALSE.}
+}
+\value{
+A list of \code{htmltools::htmlDependency} objects, or NULL.
 }
 \description{
-Returns NULL since all dependencies are now specified in the
-ortho_viewer.yaml file (neuroimjs bundle, CSS, etc.).
+Returns additional \code{htmlDependency} objects that should be
+included with the widget.  When \code{include_surface} is TRUE,
+Three.js and surfviewjs are bundled so the surface viewer can
+initialise immediately.  When FALSE (slice-only mode), those
+~600 KB libraries are omitted; they will be lazy-loaded from
+JavaScript if surface mode is activated later via a proxy command.
 }
 \keyword{internal}

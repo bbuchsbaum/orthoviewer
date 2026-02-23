@@ -381,6 +381,125 @@ OrthoViewerProxy <- R6::R6Class(
       )
       self$session$sendCustomMessage("ortho-viewer-command", msg)
       invisible(self)
+    },
+
+    #' @description Switch view mode between slices and surface.
+    #' @param mode Character: \code{"slices"} or \code{"surface"}.
+    #' @return The proxy object invisibly (for method chaining).
+    set_mode = function(mode = c("slices", "surface")) {
+      mode <- match.arg(mode)
+      msg <- list(
+        id   = self$id,
+        type = "set-mode",
+        mode = mode
+      )
+      self$session$sendCustomMessage("ortho-viewer-command", msg)
+      invisible(self)
+    },
+
+    #' @description Set pre-mapped surface data for the surface viewer.
+    #'
+    #' The surface object should be a \code{neurosurf} surface
+    #' (\code{SurfaceGeometry}, \code{NeuroSurface}, or
+    #' \code{ColorMappedNeuroSurface}). This also switches to surface mode.
+    #' @param surf A surface object from \code{neurosurf}.
+    #' @param colormap Character: colormap name.
+    #' @param range Optional numeric vector of length 2 for intensity range.
+    #' @param threshold Numeric vector of length 2 for transparency threshold.
+    #' @param opacity Numeric: surface opacity (0-1).
+    #' @return The proxy object invisibly (for method chaining).
+    set_surface = function(surf,
+                           colormap = "viridis",
+                           range = NULL,
+                           threshold = c(0, 0),
+                           opacity = 1) {
+      surface_data <- serialize_surface_for_js(
+        surf,
+        colormap = colormap,
+        range = range,
+        threshold = threshold,
+        opacity = opacity
+      )
+      msg <- list(
+        id           = self$id,
+        type         = "set-surface",
+        surface_data = surface_data
+      )
+      self$session$sendCustomMessage("ortho-viewer-command", msg)
+      invisible(self)
+    },
+
+    #' @description Set volume for GPU-based surface projection.
+    #'
+    #' Pass a surface geometry and volume; the JS side uses
+    #' \code{VolumeProjectedSurface} for on-GPU mapping.
+    #' @param surf A \code{SurfaceGeometry} from \code{neurosurf}.
+    #' @param vol A 3D volume for projection.
+    #' @param colormap Character: colormap name.
+    #' @param range Optional numeric vector of length 2 for intensity range.
+    #' @param threshold Numeric vector of length 2 for transparency threshold.
+    #' @param opacity Numeric: surface opacity (0-1).
+    #' @return The proxy object invisibly (for method chaining).
+    set_surface_volume = function(surf,
+                                  vol,
+                                  colormap = "viridis",
+                                  range = NULL,
+                                  threshold = c(0, 0),
+                                  opacity = 1) {
+      surface_data <- serialize_surface_for_js(
+        surf,
+        vol = vol,
+        colormap = colormap,
+        range = range,
+        threshold = threshold,
+        opacity = opacity
+      )
+      msg <- list(
+        id           = self$id,
+        type         = "set-surface-volume",
+        surface_data = surface_data
+      )
+      self$session$sendCustomMessage("ortho-viewer-command", msg)
+      invisible(self)
+    },
+
+    #' @description Change the surface colormap.
+    #' @param colormap Character: colormap name (e.g., \code{"hot"}, \code{"viridis"}).
+    #' @return The proxy object invisibly (for method chaining).
+    set_surface_colormap = function(colormap) {
+      msg <- list(
+        id       = self$id,
+        type     = "set-surface-colormap",
+        colormap = colormap
+      )
+      self$session$sendCustomMessage("ortho-viewer-command", msg)
+      invisible(self)
+    },
+
+    #' @description Change the surface threshold.
+    #' @param threshold Numeric vector of length 2.
+    #' @return The proxy object invisibly (for method chaining).
+    set_surface_threshold = function(threshold) {
+      msg <- list(
+        id        = self$id,
+        type      = "set-surface-threshold",
+        threshold = as.numeric(threshold)
+      )
+      self$session$sendCustomMessage("ortho-viewer-command", msg)
+      invisible(self)
+    },
+
+    #' @description Change the surface opacity.
+    #' @param opacity Numeric: opacity value from 0 to 1.
+    #' @return The proxy object invisibly (for method chaining).
+    set_surface_opacity = function(opacity) {
+      msg <- list(
+        id      = self$id,
+        type    = "set-surface-opacity",
+        opacity = opacity
+      )
+      self$session$sendCustomMessage("ortho-viewer-command", msg)
+      invisible(self)
     }
   )
 )

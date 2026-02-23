@@ -150,6 +150,12 @@ server <- function(input, output, session) {
 \item \href{#method-OrthoViewerProxy-set_layer_order}{\code{OrthoViewerProxy$set_layer_order()}}
 \item \href{#method-OrthoViewerProxy-remove_layer}{\code{OrthoViewerProxy$remove_layer()}}
 \item \href{#method-OrthoViewerProxy-get_layers}{\code{OrthoViewerProxy$get_layers()}}
+\item \href{#method-OrthoViewerProxy-set_mode}{\code{OrthoViewerProxy$set_mode()}}
+\item \href{#method-OrthoViewerProxy-set_surface}{\code{OrthoViewerProxy$set_surface()}}
+\item \href{#method-OrthoViewerProxy-set_surface_volume}{\code{OrthoViewerProxy$set_surface_volume()}}
+\item \href{#method-OrthoViewerProxy-set_surface_colormap}{\code{OrthoViewerProxy$set_surface_colormap()}}
+\item \href{#method-OrthoViewerProxy-set_surface_threshold}{\code{OrthoViewerProxy$set_surface_threshold()}}
+\item \href{#method-OrthoViewerProxy-set_surface_opacity}{\code{OrthoViewerProxy$set_surface_opacity()}}
 \item \href{#method-OrthoViewerProxy-clone}{\code{OrthoViewerProxy$clone()}}
 }
 }
@@ -498,6 +504,164 @@ This is an asynchronous operation. The result will be sent to
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{request_id}}{Optional identifier to match request with response.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+The proxy object invisibly (for method chaining).
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-OrthoViewerProxy-set_mode"></a>}}
+\if{latex}{\out{\hypertarget{method-OrthoViewerProxy-set_mode}{}}}
+\subsection{Method \code{set_mode()}}{
+Switch view mode between slices and surface.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{OrthoViewerProxy$set_mode(mode = c("slices", "surface"))}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{mode}}{Character: \code{"slices"} or \code{"surface"}.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+The proxy object invisibly (for method chaining).
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-OrthoViewerProxy-set_surface"></a>}}
+\if{latex}{\out{\hypertarget{method-OrthoViewerProxy-set_surface}{}}}
+\subsection{Method \code{set_surface()}}{
+Set pre-mapped surface data for the surface viewer.
+
+The surface object should be a \code{neurosurf} surface
+(\code{SurfaceGeometry}, \code{NeuroSurface}, or
+\code{ColorMappedNeuroSurface}). This also switches to surface mode.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{OrthoViewerProxy$set_surface(
+  surf,
+  colormap = "viridis",
+  range = NULL,
+  threshold = c(0, 0),
+  opacity = 1
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{surf}}{A surface object from \code{neurosurf}.}
+
+\item{\code{colormap}}{Character: colormap name.}
+
+\item{\code{range}}{Optional numeric vector of length 2 for intensity range.}
+
+\item{\code{threshold}}{Numeric vector of length 2 for transparency threshold.}
+
+\item{\code{opacity}}{Numeric: surface opacity (0-1).}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+The proxy object invisibly (for method chaining).
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-OrthoViewerProxy-set_surface_volume"></a>}}
+\if{latex}{\out{\hypertarget{method-OrthoViewerProxy-set_surface_volume}{}}}
+\subsection{Method \code{set_surface_volume()}}{
+Set volume for GPU-based surface projection.
+
+Pass a surface geometry and volume; the JS side uses
+\code{VolumeProjectedSurface} for on-GPU mapping.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{OrthoViewerProxy$set_surface_volume(
+  surf,
+  vol,
+  colormap = "viridis",
+  range = NULL,
+  threshold = c(0, 0),
+  opacity = 1
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{surf}}{A \code{SurfaceGeometry} from \code{neurosurf}.}
+
+\item{\code{vol}}{A 3D volume for projection.}
+
+\item{\code{colormap}}{Character: colormap name.}
+
+\item{\code{range}}{Optional numeric vector of length 2 for intensity range.}
+
+\item{\code{threshold}}{Numeric vector of length 2 for transparency threshold.}
+
+\item{\code{opacity}}{Numeric: surface opacity (0-1).}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+The proxy object invisibly (for method chaining).
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-OrthoViewerProxy-set_surface_colormap"></a>}}
+\if{latex}{\out{\hypertarget{method-OrthoViewerProxy-set_surface_colormap}{}}}
+\subsection{Method \code{set_surface_colormap()}}{
+Change the surface colormap.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{OrthoViewerProxy$set_surface_colormap(colormap)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{colormap}}{Character: colormap name (e.g., \code{"hot"}, \code{"viridis"}).}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+The proxy object invisibly (for method chaining).
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-OrthoViewerProxy-set_surface_threshold"></a>}}
+\if{latex}{\out{\hypertarget{method-OrthoViewerProxy-set_surface_threshold}{}}}
+\subsection{Method \code{set_surface_threshold()}}{
+Change the surface threshold.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{OrthoViewerProxy$set_surface_threshold(threshold)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{threshold}}{Numeric vector of length 2.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+The proxy object invisibly (for method chaining).
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-OrthoViewerProxy-set_surface_opacity"></a>}}
+\if{latex}{\out{\hypertarget{method-OrthoViewerProxy-set_surface_opacity}{}}}
+\subsection{Method \code{set_surface_opacity()}}{
+Change the surface opacity.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{OrthoViewerProxy$set_surface_opacity(opacity)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{opacity}}{Numeric: opacity value from 0 to 1.}
 }
 \if{html}{\out{</div>}}
 }

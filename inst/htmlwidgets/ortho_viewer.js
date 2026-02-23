@@ -34,6 +34,24 @@ HTMLWidgets.widget({
     viewerWrap.setAttribute("role", "region");
     viewerWrap.setAttribute("aria-label", "Orthogonal image viewer");
 
+    // Mode toggle bar (Slices / Surface) — hidden until surface data present
+    const modeToggle = document.createElement("div");
+    modeToggle.className = "ortho-mode-toggle";
+    modeToggle.setAttribute("role", "tablist");
+    modeToggle.setAttribute("aria-label", "View mode");
+    const btnSlices = document.createElement("button");
+    btnSlices.textContent = "Slices";
+    btnSlices.className = "active";
+    btnSlices.setAttribute("role", "tab");
+    btnSlices.setAttribute("aria-selected", "true");
+    const btnSurface = document.createElement("button");
+    btnSurface.textContent = "Surface";
+    btnSurface.setAttribute("role", "tab");
+    btnSurface.setAttribute("aria-selected", "false");
+    modeToggle.appendChild(btnSlices);
+    modeToggle.appendChild(btnSurface);
+    viewerWrap.appendChild(modeToggle);
+
     // inner padded container for the orthogonal viewer grid
     const viewerInner = document.createElement("div");
     viewerInner.className = "ortho-viewer-inner";
@@ -41,6 +59,13 @@ HTMLWidgets.widget({
     viewerInner.setAttribute("role", "region");
     viewerInner.setAttribute("aria-label", "Slice viewer. Arrow keys move crosshair in X and Y. Page Up or Page Down moves Z.");
     viewerWrap.appendChild(viewerInner);
+
+    // Surface viewer container (hidden by default, shown in surface mode)
+    const surfaceContainer = document.createElement("div");
+    surfaceContainer.className = "ortho-surface-container";
+    surfaceContainer.setAttribute("role", "region");
+    surfaceContainer.setAttribute("aria-label", "Surface viewer");
+    viewerWrap.appendChild(surfaceContainer);
 
     // Status bar at bottom of viewer
     const statusBar = document.createElement("div");
@@ -73,8 +98,207 @@ HTMLWidgets.widget({
       lastCrosshairCoord: null,
       statusPollTimer: null,
       crosshairPollTimer: null,
-      hoverThrottleTimeout: null
+      hoverThrottleTimeout: null,
+      // Surface mode state
+      mode: "slices",            // "slices" | "surface"
+      surfaceViewer: null,       // surfviewjs NeuroSurfaceViewer
+      surfaceData: null,         // serialized surface data from R
+      surfaceReady: false,
+      surfaceLoading: false,     // true while lazy-loading libs or initializing
+      surfaceSurface: null       // the NeuroSurface/VolumeProjectedSurface added to viewer
     };
+
+    // =========================================
+    // Mode Toggle & Surface Viewer
+    // =========================================
+
+    function setMode(mode) {
+      state.mode = mode;
+      viewerWrap.classList.toggle("mode-slices", mode === "slices");
+      viewerWrap.classList.toggle("mode-surface", mode === "surface");
+      // Update toggle button states
+      btnSlices.classList.toggle("active", mode === "slices");
+      btnSurface.classList.toggle("active", mode === "surface");
+      btnSlices.setAttribute("aria-selected", mode === "slices" ? "true" : "false");
+      btnSurface.setAttribute("aria-selected", mode === "surface" ? "true" : "false");
+
+      if (mode === "surface") {
+        ensureSurfaceViewer();
+      }
+      if (mode === "slices" && state.viewer && state.viewer.resize) {
+        // Give the DOM a tick to show the container before resizing
+        requestAnimationFrame(function() {
+          state.viewer.resize();
+        });
+      }
+      if (mode === "surface" && state.surfaceViewer) {
+        requestAnimationFrame(function() {
+          state.surfaceViewer.resize(
+            surfaceContainer.clientWidth,
+            surfaceContainer.clientHeight
+          );
+        });
+      }
+    }
+
+    btnSlices.addEventListener("click", function() { setMode("slices"); });
+    btnSurface.addEventListener("click", function() { setMode("surface"); });
+
+    // Lazy-load Three.js and surfviewjs on demand.
+    // When the widget is created with surface data, R includes these as
+    // htmlDependencies so they are already in the page.  When surface
+    // mode is activated later via a proxy command, we load them from
+    // the Shiny resource path registered in .onLoad.
+    var surfaceLibsPromise = null;
+    function loadSurfaceLibs() {
+      if (typeof surfview !== "undefined") return Promise.resolve();
+      if (surfaceLibsPromise) return surfaceLibsPromise;
+
+      surfaceLibsPromise = new Promise(function(resolve, reject) {
+        function loadScript(src) {
+          return new Promise(function(res, rej) {
+            var s = document.createElement("script");
+            s.src = src;
+            s.onload = res;
+            s.onerror = function() { rej(new Error("Failed to load: " + src)); };
+            document.head.appendChild(s);
+          });
+        }
+
+        var basePath = "orthoviewer-lib/";
+
+        // Three.js must load before surfviewjs (surfviewjs depends on THREE)
+        loadScript(basePath + "three/three.min.js")
+          .then(function() {
+            return loadScript(basePath + "surfviewjs/surfview.umd.js");
+          })
+          .then(resolve)
+          .catch(function(err) {
+            surfaceLibsPromise = null; // allow retry on failure
+            reject(err);
+          });
+      });
+
+      return surfaceLibsPromise;
+    }
+
+    function ensureSurfaceViewer() {
+      if (state.surfaceReady || state.surfaceLoading) return;
+      if (!state.surfaceData) {
+        log("ensureSurfaceViewer: no surface data available");
+        return;
+      }
+
+      state.surfaceLoading = true;
+      loadSurfaceLibs().then(function() {
+        if (state.surfaceReady) { state.surfaceLoading = false; return; }
+        if (typeof surfview === "undefined") {
+          warn("surfviewjs library could not be loaded");
+          state.surfaceLoading = false;
+          return;
+        }
+        initSurfaceViewer();
+      }).catch(function(err) {
+        state.surfaceLoading = false;
+        warn("Failed to load surface libraries:", err);
+      });
+    }
+
+    function initSurfaceViewer() {
+      var sd = state.surfaceData;
+      log("ensureSurfaceViewer: creating surface viewer, mode=", sd.projection_mode);
+
+      var w = surfaceContainer.clientWidth || 600;
+      var h = surfaceContainer.clientHeight || 500;
+
+      var viewer = new surfview.NeuroSurfaceViewer(surfaceContainer, w, h, {
+        backgroundColor: 0x090c12,
+        showControls: false,
+        useControls: true,
+        controlType: "trackball",
+        useShaders: true
+      });
+
+      state.surfaceViewer = viewer;
+
+      // Create geometry from serialized data
+      var geom = new surfview.SurfaceGeometry(
+        new Float32Array(sd.vertices),
+        new Uint32Array(sd.faces),
+        sd.hemi || "both"
+      );
+
+      if (sd.projection_mode === "gpu" && sd.volume) {
+        // GPU projection path: VolumeProjectedSurface
+        log("ensureSurfaceViewer: using VolumeProjectedSurface (GPU projection)");
+        var volSpec = sd.volume;
+        var volData = new Float32Array(volSpec.data);
+
+        var vpSurface = new surfview.VolumeProjectedSurface(geom, {
+          volumeData: volData,
+          volumeDims: volSpec.dim,
+          voxelSize: volSpec.spacing || [1, 1, 1],
+          volumeOrigin: volSpec.origin || [0, 0, 0],
+          colormap: sd.colormap || "viridis",
+          intensityRange: sd.range || null,
+          threshold: sd.threshold || [0, 0],
+          overlayOpacity: sd.opacity != null ? sd.opacity : 1,
+          baseColor: 0xa0a0a0
+        });
+
+        viewer.addSurface(vpSurface, sd.hemi || "left");
+        state.surfaceSurface = vpSurface;
+      } else {
+        // Pre-mapped data path: ColorMappedNeuroSurface or DataLayer
+        log("ensureSurfaceViewer: using pre-mapped surface data");
+
+        var cmap = sd.colormap || "viridis";
+        var cmapObj = surfview.ColorMap.fromName
+          ? surfview.ColorMap.fromName(cmap)
+          : (surfview.ColorMap.fromPreset ? surfview.ColorMap.fromPreset(cmap) : null);
+
+        var dataRange = sd.range || sd.irange;
+
+        if (sd.data && sd.data.length > 0) {
+          // Create a ColorMappedNeuroSurface
+          var nsurf = new surfview.ColorMappedNeuroSurface(
+            geom,
+            new Float32Array(sd.data),
+            sd.indices ? new Int32Array(sd.indices) : null,
+            cmapObj,
+            dataRange,
+            { thresh: sd.threshold || [0, 0], alpha: sd.opacity != null ? sd.opacity : 1 }
+          );
+          viewer.addSurface(nsurf, sd.hemi || "left");
+          state.surfaceSurface = nsurf;
+        } else {
+          // No data — just show the geometry with a basic surface
+          var plainSurf = new surfview.NeuroSurface(geom, {
+            alpha: sd.opacity != null ? sd.opacity : 1
+          });
+          viewer.addSurface(plainSurf, sd.hemi || "left");
+          state.surfaceSurface = plainSurf;
+        }
+      }
+
+      viewer.centerCamera();
+      viewer.startRenderLoop();
+      state.surfaceReady = true;
+      state.surfaceLoading = false;
+      log("initSurfaceViewer: surface viewer initialized");
+    }
+
+    function disposeSurfaceViewer() {
+      if (state.surfaceViewer) {
+        if (state.surfaceViewer.dispose) state.surfaceViewer.dispose();
+        state.surfaceViewer = null;
+      }
+      state.surfaceSurface = null;
+      state.surfaceReady = false;
+      state.surfaceLoading = false;
+      // Clear the surface container
+      surfaceContainer.innerHTML = "";
+    }
 
     function createStatusBarHTML() {
       return `
@@ -634,6 +858,76 @@ HTMLWidgets.widget({
             }
             break;
           }
+
+          // =========================================
+          // Surface commands
+          // =========================================
+
+          case "set-mode": {
+            var mode = cmd.mode;
+            if (mode === "slices" || mode === "surface") {
+              setMode(mode);
+            }
+            break;
+          }
+
+          case "set-surface":
+          case "set-surface-volume": {
+            // Both commands replace surface data and re-initialize.
+            // "set-surface" carries pre-mapped data; "set-surface-volume"
+            // carries geometry + volume for GPU projection.  The actual
+            // branching happens inside ensureSurfaceViewer() based on
+            // surfaceData.projection_mode.
+            var surfData = cmd.surface_data;
+            if (!surfData) return;
+            disposeSurfaceViewer();
+            state.surfaceData = surfData;
+            modeToggle.classList.add("visible");
+            if (state.mode === "surface") {
+              ensureSurfaceViewer();
+            }
+            break;
+          }
+
+          case "set-surface-colormap": {
+            if (!state.surfaceSurface) return;
+            var cmapName = cmd.colormap;
+            if (!cmapName) return;
+            if (state.surfaceSurface.setColormap) {
+              state.surfaceSurface.setColormap(cmapName);
+            } else if (state.surfaceSurface.updateColors) {
+              // ColorMappedNeuroSurface path: resolve name to ColorMap, then update
+              var cmapObj = surfview.ColorMap.fromName
+                ? surfview.ColorMap.fromName(cmapName)
+                : (surfview.ColorMap.fromPreset ? surfview.ColorMap.fromPreset(cmapName) : null);
+              if (cmapObj) state.surfaceSurface.updateColors(cmapObj);
+            }
+            break;
+          }
+
+          case "set-surface-threshold": {
+            if (!state.surfaceSurface) return;
+            var thr = cmd.threshold;
+            if (!thr || thr.length < 2) return;
+            if (state.surfaceSurface.setThreshold) {
+              state.surfaceSurface.setThreshold(thr[0], thr[1]);
+            } else if (state.surfaceSurface.updateConfig) {
+              state.surfaceSurface.updateConfig({ thresh: thr });
+            }
+            break;
+          }
+
+          case "set-surface-opacity": {
+            if (!state.surfaceSurface) return;
+            var opacity = cmd.opacity;
+            if (typeof opacity !== "number") return;
+            if (state.surfaceSurface.setOverlayOpacity) {
+              state.surfaceSurface.setOverlayOpacity(opacity);
+            } else if (state.surfaceSurface.updateConfig) {
+              state.surfaceSurface.updateConfig({ alpha: opacity });
+            }
+            break;
+          }
         }
       });
     }
@@ -904,18 +1198,42 @@ HTMLWidgets.widget({
           shell.classList.add("ortho-no-sidebar");
         }
 
+        // Surface data setup — show toggle when surface data provided
+        if (x && x.surface_data) {
+          state.surfaceData = x.surface_data;
+          modeToggle.classList.add("visible");
+        }
+
+        // Set initial mode (default "slices", or "surface" if requested)
+        var initMode = (x && x.initial_mode === "surface") ? "surface" : "slices";
+        viewerWrap.classList.add("mode-" + initMode);
+
         // trigger (re)initialization if needed
         ensureViewer().then(function(viewer) {
           if (!viewer) return;
           if (x && Array.isArray(x.commands)) {
             x.commands.forEach(applyCommand);
           }
+
+          // Apply initial mode after viewer is ready
+          if (initMode === "surface") {
+            setMode("surface");
+          }
         });
       },
 
       resize: function(width, height) {
-        if (state.viewer && state.viewer.resize) {
-          state.viewer.resize(width, height);
+        if (state.mode === "slices") {
+          if (state.viewer && state.viewer.resize) {
+            state.viewer.resize(width, height);
+          }
+        } else if (state.mode === "surface") {
+          if (state.surfaceViewer && state.surfaceViewer.resize) {
+            state.surfaceViewer.resize(
+              surfaceContainer.clientWidth || width,
+              surfaceContainer.clientHeight || height
+            );
+          }
         }
       }
     };
